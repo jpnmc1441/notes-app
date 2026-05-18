@@ -12,9 +12,14 @@ jobs:
     name: Build NotesApp-Setup.exe
     runs-on: windows-latest
 
-    steps:
-      - name: Checkout
+    - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Move files to root
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path "NotesApp" | Move-Item -Destination "."
+          Remove-Item "NotesApp" -Force -Recurse
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
