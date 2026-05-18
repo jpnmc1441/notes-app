@@ -1,0 +1,7 @@
+{
+  "id": "d87a0f67-a9d4-4e7c-8658-b79c675f00ea",
+  "title": "prompt ",
+  "body": "<div>Please update the app's color theme from the warm yellow/cream&nbsp;</div><div>Apple Notes style to a subtle Slack-inspired purple theme.&nbsp;</div><div><br></div><div>Use these as a guide:</div><div>- Sidebar background: a deep muted purple (like #3F0E40 or similar to Slack's sidebar)</div><div>- Sidebar text and note titles: white or light lavender</div><div>- Active/selected note highlight: a medium purple accent</div><div>- New Note button: Slack's purple or a lighter violet accent</div><div>- Editor area: clean white or very light lavender (#FAFAFA or #F9F7FF)</div><div>- Toolbar: light purple-gray</div><div>- Search bar: slightly darker than the sidebar</div><div>- Autosave indicator and accents: a soft lime green.</div><div>Keep the overall layout exactly the same — just change the colors.</div>",
+  "created_at": "2026-05-18T00:30:00.841235+00:00",
+  "updated_at": "2026-05-18T00:30:28.870997+00:00"
+}

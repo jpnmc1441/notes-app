@@ -1,0 +1,7 @@
+{
+  "id": "02fab3dc-9063-48af-97ad-ec8d6fbf5ef3",
+  "title": "index ",
+  "body": "<div>The current search only looks through index.json which contains&nbsp;</div><div>just the first 100 chars of each note body. This means search&nbsp;</div><div>misses content deeper in long notes.</div><div><br></div><div>Please implement a proper full-text search using a search index file:</div><div><br></div><div>- Create a search_index.json that stores the complete plain text&nbsp;</div><div>&nbsp; of every note (HTML tags stripped out), keyed by note ID</div><div>- Update this search index whenever a note is created, updated,&nbsp;</div><div>&nbsp; or deleted — same way index.json is maintained</div><div>- When the user searches, scan search_index.json for matches&nbsp;</div><div>&nbsp; across the full body text of all notes</div><div>- Return results ranked by relevance (title match ranked higher&nbsp;</div><div>&nbsp; than body match)</div><blockquote>- Highlight the matching word/phrase in the search results preview</blockquote><blockquote>- This should stay fast even at 10,000 notes &nbsp;</blockquote><p>indextest 1441</p>",
+  "created_at": "2026-05-18T00:26:39.461318+00:00",
+  "updated_at": "2026-05-18T00:28:09.196736+00:00"
+}

@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sidebar-bg:      #EEE8F4;
+      --sidebar-hdr:     #E6DDF0;
+      --note-hover:      #E2D8EE;
+      --note-selected:   #D4C5E8;
+      --note-sel-text:   #2A1A4A;
+      --note-sel-sub:    #6B5B85;
+      --editor-bg:       #FDFCFF;
+      --toolbar-bg:      #F5F0FC;
+      --border:          #DDD4EC;
+      --border-editor:   #EDE8F5;
+      --text:            #2A2535;
+      --text-sub:        #7B6B8D;
+      --text-ghost:      #B0A4C4;
+      --accent:          #9B7FBD;
+      --font:            -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: var(--font);
+      background: var(--sidebar-bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ── SIDEBAR ─────────────────────────────────── */
+    #sidebar {
+      width: 280px;
+      min-width: 180px;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    #sidebar-header {
+      padding: 18px 14px 12px;
+      background: var(--sidebar-hdr);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #sidebar-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    #sidebar-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+
+    #new-note-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-radius: 6px;
+      color: var(--text-sub);
+      transition: background 0.15s, color 0.15s;
+    }
+    #new-note-btn:hover { background: rgba(0,0,0,0.06); color: var(--text); }
+
+    #search-wrap {
+      position: relative;
+    }
+    #search-wrap svg {
+      position: absolute;
+      left: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-sub);
+      pointer-events: none;
+    }
+    #search-input {
+      width: 100%;
+      padding: 7px 10px 7px 30px;
+      border-radius: 8px;
+      border: none;
+      background: #E8E0F0;
+      font-size: 13.5px;
+      color: var(--text);
+      outline: none;
+      font-family: var(--font);
+    }
+    #search-input::placeholder { color: var(--text-sub); }
+    #search-input:focus { background: #DFD5EA; }
+
+    #note-list-header {
+      padding: 8px 14px 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    #note-count { font-size: 11.5px; color: var(--text-sub); }
+
+    #note-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    #note-list::-webkit-scrollbar { width: 5px; }
+    #note-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+
+    .note-item {
+      padding: 10px 38px 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      transition: background 0.1s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .note-item:hover { background: var(--note-hover); }
+    .note-item.selected { background: var(--note-selected); }
+
+    .note-item-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .note-item.selected .note-item-title { color: var(--note-sel-text); }
+
+    .note-item-date {
+      font-size: 11.5px;
+      color: var(--text-sub);
+      margin-bottom: 2px;
+    }
+    .note-item.selected .note-item-date { color: var(--note-sel-sub); }
+
+    .note-item-preview {
+      font-size: 12px;
+      color: var(--text-ghost);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .note-item.selected .note-item-preview { color: var(--note-sel-sub); }
+
+    .note-del-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-sub);
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 16px;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .note-item:hover .note-del-btn { opacity: 1; }
+    .note-item.selected .note-del-btn { color: var(--note-sel-sub); opacity: 0; }
+    .note-item.selected:hover .note-del-btn { opacity: 1; }
+    .note-del-btn:hover { background: rgba(0,0,0,0.08); }
+
+    #no-notes {
+      padding: 32px 14px;
+      text-align: center;
+      color: var(--text-sub);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* ── RESIZE DIVIDER ───────────────────────────── */
+    #divider {
+      width: 5px;
+      cursor: col-resize;
+      flex-shrink: 0;
+      background: transparent;
+      transition: background 0.2s;
+      z-index: 10;
+    }
+    #divider:hover, #divider.active { background: rgba(0,0,0,0.08); }
+
+    /* ── EDITOR PANEL ────────────────────────────── */
+    #editor-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--editor-bg);
+      overflow: hidden;
+    }
+
+    /* Empty state */
+    #empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      color: var(--text-ghost);
+    }
+    #empty-state svg { opacity: 0.35; }
+    #empty-state p { font-size: 15px; }
+
+    /* Note editor */
+    #note-editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #editor-header {
+      padding: 18px 30px 14px;
+      border-bottom: 1px solid var(--border-editor);
+      flex-shrink: 0;
+    }
+
+    #editor-header-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    #note-title-input {
+      flex: 1;
+      min-width: 0;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      border: none;
+      outline: none;
+      color: var(--text);
+      background: transparent;
+      font-family: var(--font);
+    }
+    #note-title-input::placeholder { color: #CECECE; }
+
+    /* Top action buttons */
+    #editor-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      padding: 5px 12px;
+      border-radius: 7px;
+      border: none;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-family: var(--font);
+      font-weight: 500;
+      transition: background 0.15s, opacity 0.15s;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+
+    #new-note-top-btn {
+      background: var(--accent);
+      color: #FFFFFF;
+      font-weight: 600;
+    }
+    #new-note-top-btn:hover { background: #8768A8; }
+
+    .action-btn-secondary {
+      background: rgba(0,0,0,0.06);
+      color: var(--text);
+    }
+    .action-btn-secondary:hover { background: rgba(0,0,0,0.11); }
+
+    #editor-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+    #save-indicator {
+      font-size: 12px;
+      color: #9B7FBD;
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    #save-indicator.show { opacity: 1; }
+
+    /* ── TOOLBAR ─────────────────────────────────── */
+    #toolbar {
+      display: flex;
+      align-items: center;
+      gap: 1px;
+      padding: 5px 20px;
+      border-bottom: 1px solid var(--border-editor);
+      background: var(--toolbar-bg);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      row-gap: 3px;
+    }
+
+    .tbtn {
+      padding: 4px 8px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 13px;
+      font-family: var(--font);
+      color: var(--text);
+      transition: background 0.12s;
+      line-height: 1.4;
+      white-space: nowrap;
+    }
+    .tbtn:hover { background: rgba(0,0,0,0.07); }
+    .tbtn:active { background: rgba(0,0,0,0.14); }
+    .tbtn.b { font-weight: 700; }
+    .tbtn.i { font-style: italic; }
+    .tbtn.u { text-decoration: underline; }
+    .tbtn.s { text-decoration: line-through; }
+
+    .tsep {
+      width: 1px;
+      height: 16px;
+      background: #D0C8E8;
+      margin: 0 3px;
+      flex-shrink: 0;
+    }
+
+    /* Font size select */
+    .tselect {
+      padding: 3px 5px;
+      border: 1px solid #D0C8E8;
+      border-radius: 5px;
+      background: none;
+      font-size: 12.5px;
+      font-family: var(--font);
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+      height: 26px;
+    }
+    .tselect:hover { background: rgba(0,0,0,0.05); }
+
+    /* ── EDITOR BODY ─────────────────────────────── */
+    #editor-body {
+      flex: 1;
+      padding: 20px 30px 24px;
+      outline: none;
+      overflow-y: auto;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    #editor-body::-webkit-scrollbar { width: 5px; }
+    #editor-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.13); border-radius: 3px; }
+
+    #editor-body:empty::before {
+      content: attr(data-placeholder);
+      color: #CECECE;
+      pointer-events: none;
+      display: block;
+    }
+
+    #editor-body h1 { font-size: 21px; font-weight: 700; margin: 14px 0 6px; letter-spacing: -0.3px; }
+    #editor-body h2 { font-size: 17px; font-weight: 600; margin: 12px 0 4px; }
+    #editor-body h3 { font-size: 15px; font-weight: 600; margin: 10px 0 3px; }
+    #editor-body p  { margin: 3px 0; }
+    #editor-body ul, #editor-body ol { padding-left: 22px; margin: 5px 0; }
+    #editor-body li { margin: 2px 0; }
+    #editor-body blockquote {
+      border-left: 3px solid var(--border-editor);
+      padding: 4px 0 4px 14px;
+      color: var(--text-sub);
+      margin: 6px 0;
+      font-style: italic;
+    }
+
+    /* ── EDITOR FOOTER ───────────────────────────── */
+    #editor-footer {
+      padding: 7px 30px;
+      border-top: 1px solid var(--border-editor);
+      background: var(--toolbar-bg);
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--text-sub);
+      flex-shrink: 0;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ── PRINT STYLES ────────────────────────────── */
+    @media print {
+      #sidebar, #divider { display: none !important; }
+      #editor-panel { display: block !important; width: 100% !important; }
+      #editor-actions, #toolbar, #editor-footer { display: none !important; }
+      #note-editor { display: block !important; overflow: visible !important; }
+      #editor-header { border: none !important; padding: 0 0 12px !important; }
+      #editor-meta { display: none !important; }
+      #editor-body {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        padding: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ─────────────────────────────────────── -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <div id="sidebar-top">
+      <span id="sidebar-title">Notes</span>
+      <button id="new-note-btn" title="New Note (⌘N)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+      </button>
+    </div>
+    <div id="search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <input id="search-input" type="text" placeholder="Search" autocomplete="off" spellcheck="false" />
+    </div>
+  </div>
+
+  <div id="note-list-header">
+    <span id="note-count"></span>
+  </div>
+
+  <div id="note-list"></div>
+</div>
+
+<!-- ── RESIZE DIVIDER ──────────────────────────────── -->
+<div id="divider"></div>
+
+<!-- ── EDITOR PANEL ───────────────────────────────── -->
+<div id="editor-panel">
+
+  <div id="empty-state">
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <line x1="10" y1="9" x2="8" y2="9"/>
+    </svg>
+    <p>Select a note or create a new one</p>
+  </div>
+
+  <div id="note-editor" class="hidden">
+
+    <div id="editor-header">
+      <div id="editor-header-top">
+        <input id="note-title-input" type="text" placeholder="Title" spellcheck="true" />
+        <div id="editor-actions">
+          <button class="action-btn" id="new-note-top-btn" onclick="createNote()" title="New Note (⌘N)">+ New Note</button>
+          <button class="action-btn action-btn-secondary" onclick="printNote()" title="Print note">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print
+          </button>
+          <button class="action-btn action-btn-secondary" onclick="downloadNote()" title="Export as .txt">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export
+          </button>
+        </div>
+      </div>
+      <div id="editor-meta">
+        <span id="note-date"></span>
+        <span id="save-indicator">Saved</span>
+      </div>
+    </div>
+
+    <div id="toolbar">
+      <!-- Undo / Redo -->
+      <button class="tbtn" onclick="undoEdit()"  title="Undo (⌘Z)">↩ Undo</button>
+      <button class="tbtn" onclick="redoEdit()"  title="Redo (⌘⇧Z)">↪ Redo</button>
+      <div class="tsep"></div>
+      <!-- Text style -->
+      <button class="tbtn b" onclick="fmt('bold')"          title="Bold (⌘B)">B</button>
+      <button class="tbtn i" onclick="fmt('italic')"        title="Italic (⌘I)">I</button>
+      <button class="tbtn u" onclick="fmt('underline')"     title="Underline (⌘U)">U</button>
+      <button class="tbtn s" onclick="fmt('strikeThrough')" title="Strikethrough">S</button>
+      <div class="tsep"></div>
+      <!-- Headings -->
+      <button class="tbtn" onclick="fmt('formatBlock','h1')"        title="Heading 1">H1</button>
+      <button class="tbtn" onclick="fmt('formatBlock','h2')"        title="Heading 2">H2</button>
+      <button class="tbtn" onclick="fmt('formatBlock','h3')"        title="Heading 3">H3</button>
+      <button class="tbtn" onclick="fmt('formatBlock','p')"         title="Body text">Aa</button>
+      <div class="tsep"></div>
+      <!-- Lists & Quote -->
+      <button class="tbtn" onclick="fmt('insertUnorderedList')"     title="Bullet list">• List</button>
+      <button class="tbtn" onclick="fmt('insertOrderedList')"       title="Numbered list">1. List</button>
+      <button class="tbtn" onclick="fmt('formatBlock','blockquote')" title="Blockquote">" Quote</button>
+      <div class="tsep"></div>
+      <!-- Alignment -->
+      <button class="tbtn" onclick="fmt('justifyLeft')"   title="Align left">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>
+      </button>
+      <button class="tbtn" onclick="fmt('justifyCenter')" title="Align center">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+      </button>
+      <div class="tsep"></div>
+      <!-- Font size -->
+      <select class="tselect" onchange="setFontSize(this.value)" title="Font size">
+        <option value="">Size</option>
+        <option value="12px">12</option>
+        <option value="14px">14</option>
+        <option value="15px">15</option>
+        <option value="16px">16</option>
+        <option value="18px">18</option>
+        <option value="20px">20</option>
+        <option value="24px">24</option>
+      </select>
+    </div>
+
+    <div id="editor-body" contenteditable="true" data-placeholder="Start writing…" spellcheck="true"></div>
+
+    <div id="editor-footer">
+      <span id="word-count">0 words · 0 chars</span>
+      <span id="note-created"></span>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────
+  let currentNoteId = null;
+  let notes = [];
+
+  // ── DOM refs ───────────────────────────────────────
+  const noteList      = document.getElementById('note-list');
+  const noteCount     = document.getElementById('note-count');
+  const searchInput   = document.getElementById('search-input');
+  const emptyState    = document.getElementById('empty-state');
+  const noteEditor    = document.getElementById('note-editor');
+  const titleInput    = document.getElementById('note-title-input');
+  const editorBody    = document.getElementById('editor-body');
+  const noteDate      = document.getElementById('note-date');
+  const noteCreated   = document.getElementById('note-created');
+  const wordCountEl   = document.getElementById('word-count');
+  const saveIndicator = document.getElementById('save-indicator');
+
+  // ── Utilities ──────────────────────────────────────
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+
+  function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d   = new Date(iso);
+    const now = new Date();
+    const tod = now.toDateString();
+    const yes = new Date(now - 86400000).toDateString();
+    const t   = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (d.toDateString() === tod) return `Today at ${t}`;
+    if (d.toDateString() === yes) return `Yesterday at ${t}`;
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' at ' + t;
+  }
+
+  // ── Save indicator ─────────────────────────────────
+  let saveHideTimer;
+  function showSaving() {
+    clearTimeout(saveHideTimer);
+    saveIndicator.textContent = 'Saving…';
+    saveIndicator.classList.add('show');
+  }
+  function showSaved() {
+    saveIndicator.textContent = 'Saved';
+    saveHideTimer = setTimeout(() => saveIndicator.classList.remove('show'), 1800);
+  }
+
+  // ── Render note list ───────────────────────────────
+  function renderList(arr) {
+    noteCount.textContent = `${arr.length} note${arr.length !== 1 ? 's' : ''}`;
+    if (!arr.length) {
+      noteList.innerHTML = '<div id="no-notes">No notes yet.<br>Click + to create one.</div>';
+      return;
+    }
+    noteList.innerHTML = arr.map(n => `
+      <div class="note-item${n.id === currentNoteId ? ' selected' : ''}"
+           data-id="${n.id}"
+           onclick="selectNote('${n.id}')">
+        <div class="note-item-title">${escHtml(n.title || 'Untitled')}</div>
+        <div class="note-item-date">${fmtDate(n.updated_at)}</div>
+        <div class="note-item-preview">${escHtml(n.preview || '')}</div>
+        <button class="note-del-btn"
+                onclick="deleteNote(event,'${n.id}')"
+                title="Delete note">×</button>
+      </div>`).join('');
+  }
+
+  // ── Load full list ─────────────────────────────────
+  async function loadList() {
+    const res = await fetch('/api/notes');
+    notes = await res.json();
+    renderList(notes);
+  }
+
+  // ── Select / open a note ───────────────────────────
+  async function selectNote(id) {
+    if (id === currentNoteId) return;
+    currentNoteId = id;
+
+    const res = await fetch(`/api/notes/${id}`);
+    if (!res.ok) { currentNoteId = null; return; }
+    const note = await res.json();
+
+    emptyState.classList.add('hidden');
+    noteEditor.classList.remove('hidden');
+
+    titleInput.value      = note.title || '';
+    editorBody.innerHTML  = note.body  || '';
+    noteDate.textContent     = fmtDate(note.updated_at);
+    noteCreated.textContent  = `Created ${fmtDate(note.created_at)}`;
+    updateWordCount();
+
+    document.querySelectorAll('.note-item').forEach(el =>
+      el.classList.toggle('selected', el.dataset.id === id));
+
+    titleInput.focus();
+  }
+
+  // ── Create note ────────────────────────────────────
+  async function createNote() {
+    const res  = await fetch('/api/notes', { method: 'POST' });
+    const note = await res.json();
+    notes.unshift({ ...note, preview: '' });
+    renderList(notes);
+    await selectNote(note.id);
+    titleInput.select();
+  }
+
+  // ── Save note ──────────────────────────────────────
+  async function saveNote() {
+    if (!currentNoteId) return;
+    showSaving();
+    const title = titleInput.value || 'Untitled';
+    const body  = editorBody.innerHTML;
+    const res   = await fetch(`/api/notes/${currentNoteId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body }),
+    });
+    if (!res.ok) return;
+    const updated = await res.json();
+
+    const idx = notes.findIndex(n => n.id === currentNoteId);
+    if (idx !== -1) {
+      notes[idx] = {
+        ...notes[idx],
+        title:      updated.title,
+        preview:    editorBody.innerText.slice(0, 120),
+        updated_at: updated.updated_at,
+      };
+      const [n] = notes.splice(idx, 1);
+      notes.unshift(n);
+      renderList(notes);
+    }
+    noteDate.textContent = fmtDate(updated.updated_at);
+    showSaved();
+  }
+
+  const debouncedSave = debounce(saveNote, 600);
+
+  // ── Delete note ────────────────────────────────────
+  async function deleteNote(e, id) {
+    e.stopPropagation();
+    if (!confirm('Delete this note? This cannot be undone.')) return;
+    const idx = notes.findIndex(n => n.id === id);
+    await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+    notes = notes.filter(n => n.id !== id);
+
+    if (currentNoteId === id) {
+      currentNoteId = null;
+      noteEditor.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+      if (notes.length > 0) {
+        renderList(notes);
+        selectNote(notes[Math.min(idx, notes.length - 1)].id);
+        return;
+      }
+    }
+    renderList(notes);
+  }
+
+  // ── Word + character count ─────────────────────────
+  function updateWordCount() {
+    const txt   = editorBody.innerText || '';
+    const words = txt.trim() ? txt.trim().split(/\s+/).length : 0;
+    const chars = txt.replace(/\n/g, '').length;
+    wordCountEl.textContent =
+      `${words} word${words !== 1 ? 's' : ''} · ${chars} char${chars !== 1 ? 's' : ''}`;
+  }
+
+  // ── Formatting ─────────────────────────────────────
+  function fmt(cmd, val) {
+    editorBody.focus();
+    document.execCommand(cmd, false, val || null);
+    debouncedSave();
+  }
+
+  function undoEdit() {
+    editorBody.focus();
+    document.execCommand('undo', false, null);
+  }
+
+  function redoEdit() {
+    editorBody.focus();
+    document.execCommand('redo', false, null);
+  }
+
+  function setFontSize(size) {
+    if (!size) return;
+    editorBody.focus();
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    document.execCommand('fontSize', false, '7');
+    editorBody.querySelectorAll('font[size="7"]').forEach(el => {
+      const span = document.createElement('span');
+      span.style.fontSize = size;
+      while (el.firstChild) span.appendChild(el.firstChild);
+      el.parentNode.replaceChild(span, el);
+    });
+    // Reset select back to placeholder
+    const sel2 = document.querySelector('.tselect');
+    if (sel2) sel2.value = '';
+    debouncedSave();
+  }
+
+  // ── Print note ─────────────────────────────────────
+  function printNote() {
+    window.print();
+  }
+
+  // ── Export note as .txt ────────────────────────────
+  function downloadNote() {
+    if (!currentNoteId) return;
+    const title   = titleInput.value || 'Untitled';
+    const content = editorBody.innerText || '';
+    const text    = `${title}\n${'─'.repeat(Math.min(title.length, 60))}\n\n${content}`;
+    const blob    = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    a.href        = url;
+    a.download    = `${title.replace(/[^a-z0-9 ]/gi, '_').trim() || 'note'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Search ─────────────────────────────────────────
+  const debouncedSearch = debounce(async (q) => {
+    if (!q.trim()) { renderList(notes); return; }
+    const res     = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const results = await res.json();
+    renderList(results);
+  }, 280);
+
+  // ── Resize sidebar ─────────────────────────────────
+  const sidebar = document.getElementById('sidebar');
+  const divider = document.getElementById('divider');
+  let resizing  = false;
+
+  divider.addEventListener('mousedown', e => {
+    resizing = true;
+    divider.classList.add('active');
+    document.body.style.cursor     = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!resizing) return;
+    const w = e.clientX;
+    if (w >= 180 && w <= 520) sidebar.style.width = w + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!resizing) return;
+    resizing = false;
+    divider.classList.remove('active');
+    document.body.style.cursor     = '';
+    document.body.style.userSelect = '';
+  });
+
+  // ── Event listeners ────────────────────────────────
+  document.getElementById('new-note-btn').addEventListener('click', createNote);
+
+  searchInput.addEventListener('input', e => debouncedSearch(e.target.value));
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { searchInput.value = ''; renderList(notes); }
+  });
+
+  titleInput.addEventListener('input', () => {
+    const el = noteList.querySelector(`.note-item[data-id="${currentNoteId}"] .note-item-title`);
+    if (el) el.textContent = titleInput.value || 'Untitled';
+    debouncedSave();
+  });
+
+  editorBody.addEventListener('input', () => {
+    updateWordCount();
+    debouncedSave();
+  });
+
+  // Keyboard shortcuts
+  editorBody.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey) {
+      if (e.key === 'b') { e.preventDefault(); fmt('bold'); }
+      if (e.key === 'i') { e.preventDefault(); fmt('italic'); }
+      if (e.key === 'u') { e.preventDefault(); fmt('underline'); }
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+      e.preventDefault();
+      createNote();
+    }
+  });
+
+  // ── Init ───────────────────────────────────────────
+  loadList();
+</script>
+</body>
+</html>
